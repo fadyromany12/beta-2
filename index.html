@@ -1585,7 +1585,9 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
   border: 1px solid var(--border-color);
   padding: 10px 12px;
   border-radius: 6px;
-  background-color: var(--card-bg); /* Match card background */
+  outline: 2px solid var(--konecta-blue);
+  border-color: var(--konecta-blue);
+  background-color: var(--input-bg);
   cursor: pointer;
   position: relative;
   font-weight: 500;
@@ -2028,7 +2030,7 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
         <!--    TAB 5: SCHEDULE EDITOR PANEL neww    -->
         <!-- ================================== -->
         
-        <div id="schedule-panel" class="tab-content" style="display:none;">
+        <div id="schedule-panel" class="tab-panel" style="display:none;">
   <div class="card">
     <div class="card-header">
       <h3>Smart Schedule Editor</h3>
@@ -2040,9 +2042,14 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
         <div class="form-group" style="flex: 2; min-width: 250px;">
           <label>Select Agents</label>
           <div class="multiselect">
-            <div id="agent-select-trigger" onclick="toggleSmartDropdown()">
-              Select Agents...
-            </div>
+            <div id="agent-select-trigger" 
+     onclick="toggleSmartDropdown()" 
+     tabindex="0" 
+     onkeydown="if(event.key==='Enter'||event.key===' ') { toggleSmartDropdown(); event.preventDefault(); }" 
+     role="button" 
+     aria-haspopup="listbox">
+  Select Agents...
+</div>
             <div id="checkboxes">
               </div>
           </div>
@@ -2673,6 +2680,7 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
       let OT_PRE_THRESHOLD = 300; // Default 5 mins
       let OT_POST_THRESHOLD = 300; // Default 5 mins
       let selfUserName = "";
+      let selfEmail = ""; 
       let selfRole = "agent"; 
       let allUsersList = []; 
       let allAdminsList = []; 
@@ -3049,7 +3057,7 @@ function populateUserInfo(user) {
           infoDiv.classList.add('error', 'visible');
           infoDiv.style.textAlign = 'center';
           document.getElementById('app-loader').style.display = 'none';
-        }, 18000);
+        }, 13000);
 
         // 3. Run script
         google.script.run
@@ -7694,19 +7702,26 @@ function initSmartDropdown() {
           if (p && p!==s) { if(!reportsMap[p]) reportsMap[p]=[]; reportsMap[p].push(u.email); }
       });
 
-      // Traverse Hierarchy (BFS)
-      const queue = [selfEmail.toLowerCase()];
-      while(queue.length > 0) {
-          const current = queue.shift();
-          const directReports = reportsMap[current] || [];
-          directReports.forEach(email => {
-              if (!myTeamSet.has(email)) {
-                  myTeamSet.add(email);
-                  // If this report is also a manager (not agent), add to queue to find THEIR reports
-                  const u = allUsersList.find(x => x.email === email);
-                  if (u && u.role !== 'agent') queue.push(email);
-              }
-          });
+      // Traverse Hierarchy (BFS) - [FIXED CRASH HERE]
+      if (selfEmail) {
+          const queue = [selfEmail.toLowerCase()];
+          while(queue.length > 0) {
+              const current = queue.shift();
+              const directReports = reportsMap[current] || [];
+              directReports.forEach(email => {
+                  if (!myTeamSet.has(email)) {
+                      myTeamSet.add(email);
+                      // If this report is also a manager, add to queue to find THEIR reports
+                      const u = allUsersList.find(x => x.email === email);
+                      if (u && u.role !== 'agent') queue.push(email);
+                  }
+              });
+          }
+      } else {
+          // Fallback if selfEmail is somehow empty
+          console.error("selfEmail is missing in initSmartDropdown");
+          container.innerHTML = '<div style="padding:10px; color:red;">Error: User info not loaded. Try refreshing.</div>';
+          return;
       }
 
       // Filter the main list
