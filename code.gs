@@ -1965,21 +1965,30 @@ function getUserDataFromDb(ss) {
 
 /**
  * UPDATED PHASE 2: Returns Status + Login Time for Timers
+ * OPTIMIZED: Reads only the last 500 rows to prevent timeouts.
  */
 function getLatestPunchStatus(userEmail, userName, shiftDate, formattedDate) {
   const ss = getSpreadsheet();
   const adherenceSheet = getOrCreateSheet(ss, SHEET_NAMES.adherence);
   
-  // Find the row
-  const adherenceData = adherenceSheet.getDataRange().getValues();
-  let rowData = null;
+  // OPTIMIZATION: Only read the last 500 rows
+  const lastRow = adherenceSheet.getLastRow();
+  const numRows = Math.min(lastRow - 1, 500); // Read max 500 rows
+  const startRow = Math.max(2, lastRow - numRows + 1);
   
-  // Find row matching today
-  for (let i = adherenceData.length - 1; i > 0; i--) {
+  let adherenceData = [];
+  if (lastRow > 1) {
+    // Get values from StartRow to LastRow
+    adherenceData = adherenceSheet.getRange(startRow, 1, numRows, adherenceSheet.getLastColumn()).getValues();
+  }
+
+  let rowData = null;
+  // Loop through the data we fetched (which is just the recent stuff)
+  for (let i = adherenceData.length - 1; i >= 0; i--) {
     const rowDate = adherenceData[i][0];
     let rowDateStr = (rowDate instanceof Date) ? 
         Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "MM/dd/yyyy") : "";
-    
+        
     if (rowDateStr === formattedDate && adherenceData[i][1] === userName) {
       rowData = adherenceData[i];
       break;
@@ -1994,22 +2003,18 @@ function getLatestPunchStatus(userEmail, userName, shiftDate, formattedDate) {
 
   // Col C (index 2) is Login Time
   const loginTime = rowData[2] ? new Date(rowData[2]) : null;
-  
   // Col Y (index 24) is LastAction, Col Z (index 25) is Timestamp
-  // These were populated by our new updateState() helper
   const lastAction = rowData[24];
   const lastActionTime = rowData[25] ? new Date(rowData[25]) : null;
 
   // Determine Display Status
   let displayStatus = "Logged Out";
-  
   if (lastAction === "Login" || (lastAction && lastAction.endsWith("Out") && lastAction !== "Logout")) {
       displayStatus = "Logged In";
   } else if (lastAction === "Logout") {
       displayStatus = "Logged Out";
   } else if (lastAction) {
-      // "Meeting In", "First Break In", "Coaching In"
-      displayStatus = lastAction; // Pass raw "In" status
+      displayStatus = lastAction;
   }
 
   return {
