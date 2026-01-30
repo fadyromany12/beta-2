@@ -1571,52 +1571,89 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
 .rank-apprentice { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
 .rank-novice { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
 
-/* FIX 2: Corrected Dropdown CSS */
-    .multiselect { 
-      position: relative; 
-      width: 100%; 
-      z-index: 100; /* Ensure container is above other form elements */
-    }
-    .selectBox { position: relative; cursor: pointer; } /* Added cursor pointer */
-    .selectBox select { width: 100%; font-weight: bold; cursor: pointer; }
-    .overSelect { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
-    
-    #checkboxes { 
-      display: none; 
-      border: 1px solid var(--border-color); 
-      border-top: none; 
-      max-height: 250px; /* Increased height */
-      overflow-y: auto; 
-      background: var(--card-bg); 
-      position: absolute; 
-      width: 100%; 
-      z-index: 1000 !important; /* Force it to float ABOVE everything */
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
-      border-radius: 0 0 6px 6px;
-    }
-    #checkboxes label { 
-      display: block; 
-      padding: 10px 12px; 
-      cursor: pointer; 
-      border-bottom: 1px solid var(--border-color); 
-      font-size: 0.9rem;
-    }
-    #checkboxes label:hover { background-color: var(--input-bg); }
-    #checkboxes input { margin-right: 10px; transform: scale(1.2); }
+/* --- FIXED SCHEDULE EDITOR STYLES --- */
 
-    /* FIX 3: Confined Save Bar */
-    #smart-save-bar {
-      display: none; 
-      text-align: right; 
-      background: var(--card-bg); 
-      padding: 15px; 
-      position: sticky; 
-      bottom: 0; 
-      border-top: 2px solid var(--konecta-blue); 
-      box-shadow: 0 -4px 15px rgba(0,0,0,0.1); 
-      z-index: 90; /* High but below dropdowns */
-      margin: 0 -24px -24px -24px; /* Stretch to edges of card */
-    }
+/* 1. The Container */
+.multiselect {
+  position: relative;
+  width: 100%;
+  z-index: 101; /* Above other form inputs */
+}
+
+/* 2. The Trigger Button (The box you click) */
+#agent-select-trigger {
+  border: 1px solid var(--border-color);
+  padding: 10px 12px;
+  border-radius: 6px;
+  background-color: var(--card-bg); /* Match card background */
+  cursor: pointer;
+  position: relative;
+  font-weight: 500;
+  user-select: none;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#agent-select-trigger::after {
+  content: '▼';
+  font-size: 0.8em;
+  color: #666;
+}
+
+#agent-select-trigger:hover {
+  border-color: var(--primary-color);
+}
+
+/* 3. The Dropdown List */
+#checkboxes {
+  display: none; /* Hidden by default */
+  border: 1px solid var(--border-color);
+  border-top: none;
+  position: absolute;
+  top: 100%; /* Directly below trigger */
+  left: 0;
+  width: 100%;
+  background: var(--card-bg);
+  z-index: 1000 !important; /* Force it on TOP of everything */
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  border-radius: 0 0 8px 8px;
+}
+
+#checkboxes label {
+  display: block;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.95rem;
+  transition: background 0.2s;
+}
+
+#checkboxes label:hover {
+  background-color: var(--input-bg);
+}
+
+#checkboxes input {
+  margin-right: 10px;
+  transform: scale(1.1);
+}
+
+/* 4. The Save Bar */
+#smart-save-bar {
+  display: none; 
+  text-align: right; 
+  background: var(--card-bg); 
+  padding: 15px; 
+  position: sticky; 
+  bottom: 0; 
+  border-top: 2px solid var(--primary-color); 
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.1); 
+  z-index: 90; 
+  margin: 0 -20px -20px -20px; /* Stretch to card edges */
+}
 
 
 
@@ -1990,7 +2027,8 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
           <!-- ================================== -->
         <!--    TAB 5: SCHEDULE EDITOR PANEL neww    -->
         <!-- ================================== -->
-<div id="schedule-panel" class="tab-content" style="display:none;">
+        
+        <div id="schedule-panel" class="tab-content" style="display:none;">
   <div class="card">
     <div class="card-header">
       <h3>Smart Schedule Editor</h3>
@@ -2002,11 +2040,8 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
         <div class="form-group" style="flex: 2; min-width: 250px;">
           <label>Select Agents</label>
           <div class="multiselect">
-            <div class="selectBox" onclick="showCheckboxes()">
-              <select class="form-control">
-                <option>Select Agents...</option>
-              </select>
-              <div class="overSelect"></div>
+            <div id="agent-select-trigger" onclick="toggleSmartDropdown()">
+              Select Agents...
             </div>
             <div id="checkboxes">
               </div>
@@ -2033,14 +2068,16 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
         </p>
       </div>
 
-      <div id="smart-save-bar" style="display: none; text-align: right; background: var(--card-bg); padding: 15px; position: sticky; bottom: 0; border-top: 2px solid var(--primary-color); box-shadow: 0 -4px 15px rgba(0,0,0,0.1); z-index: 50;">
+      <div id="smart-save-bar">
         <span style="margin-right: 15px; font-weight: bold; color: var(--primary-color);">
           Unsaved Changes detected
         </span>
         <button type="button" class="btn-primary" onclick="saveSmartGrid()">Save Changes</button>
       </div>
 
-    </div></div></div>
+    </div>
+  </div>
+</div>
 
 
         <!-- ================================== -->
@@ -3011,7 +3048,7 @@ function populateUserInfo(user) {
           infoDiv.classList.add('error', 'visible');
           infoDiv.style.textAlign = 'center';
           document.getElementById('app-loader').style.display = 'none';
-        }, 15000);
+        }, 18000);
 
         // 3. Run script
         google.script.run
@@ -7572,6 +7609,34 @@ function saveScheduleGrid() {
 
 // 1. Multi-Select Logic
 let expanded = false;
+
+// --- 1. TOGGLE DROPDOWN (Click Logic) ---
+function toggleSmartDropdown() {
+  const checkboxes = document.getElementById("checkboxes");
+  
+  // Check if currently hidden
+  const isClosed = checkboxes.style.display === "none" || checkboxes.style.display === "";
+  
+  if (isClosed) {
+    checkboxes.style.display = "block";
+    // Delay adding the outside click listener slightly
+    setTimeout(() => document.addEventListener('click', closeSmartDropdownOutside), 10);
+  } else {
+    checkboxes.style.display = "none";
+    document.removeEventListener('click', closeSmartDropdownOutside);
+  }
+}
+
+function closeSmartDropdownOutside(e) {
+  const container = document.querySelector('.multiselect');
+  // If click is outside the container, close it
+  if (container && !container.contains(e.target)) {
+    document.getElementById("checkboxes").style.display = "none";
+    document.removeEventListener('click', closeSmartDropdownOutside);
+  }
+}
+
+
 function showCheckboxes() {
   const checkboxes = document.getElementById("checkboxes");
   if (!expanded) {
@@ -7596,35 +7661,50 @@ function closeCheckboxesOutside(e) {
   }
 }
 
-// Initialize the Dropdown (Call this inside showTab 'schedule')
+// --- 2. INITIALIZE DROPDOWN (Called by showTab) ---
 function initSmartDropdown() {
   const container = document.getElementById('checkboxes');
-  container.innerHTML = '';
+  if (!container) return;
+  
+  container.innerHTML = ''; // Clear old list
   
   // "Select All" Option
   const allLabel = document.createElement('label');
   allLabel.innerHTML = `<input type="checkbox" id="smart-check-all" onchange="toggleSmartAll(this)"> <strong>Select Whole Team</strong>`;
+  allLabel.style.backgroundColor = "var(--input-bg)"; // Highlight header
   container.appendChild(allLabel);
 
-  // Individual Subordinates
-  // Sort alphabetically
-  allUsersList.sort((a,b) => a.name.localeCompare(b.name));
+  // Individual Agents
+  if (allUsersList && allUsersList.length > 0) {
+    allUsersList.sort((a,b) => a.name.localeCompare(b.name));
+    
+    allUsersList.forEach(u => {
+      const lbl = document.createElement('label');
+      lbl.innerHTML = `<input type="checkbox" class="smart-agent-check" value="${u.email}"> ${u.name}`;
+      container.appendChild(lbl);
+    });
+  } else {
+    container.innerHTML += '<div style="padding:10px; color:#888;">No agents found.</div>';
+  }
   
-  allUsersList.forEach(u => {
-    const lbl = document.createElement('label');
-    lbl.innerHTML = `<input type="checkbox" class="smart-agent-check" value="${u.email}"> ${u.name}`;
-    container.appendChild(lbl);
-  });
-  
-  // Default Month
+  // Default Month (Current Month)
   const now = new Date();
-  const monthStr = now.toISOString().slice(0, 7); // "YYYY-MM"
+  const monthStr = now.toISOString().slice(0, 7); 
   document.getElementById('smart-month-picker').value = monthStr;
 }
 
+// --- 3. SELECT ALL LOGIC ---
 function toggleSmartAll(source) {
   const checkboxes = document.querySelectorAll('.smart-agent-check');
   checkboxes.forEach(cb => cb.checked = source.checked);
+  
+  // Update button text
+  const trigger = document.getElementById('agent-select-trigger');
+  if (source.checked) {
+    trigger.innerText = `All Agents Selected (${checkboxes.length})`;
+  } else {
+    trigger.innerText = "Select Agents...";
+  }
 }
 
 // 2. Load Data
