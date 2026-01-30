@@ -2041,18 +2041,7 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
         
         <div class="form-group" style="flex: 2; min-width: 250px;">
           <label>Select Agents</label>
-          <div class="multiselect">
-            <div id="agent-select-trigger" 
-     onclick="toggleSmartDropdown()" 
-     tabindex="0" 
-     onkeydown="if(event.key==='Enter'||event.key===' ') { toggleSmartDropdown(); event.preventDefault(); }" 
-     role="button" 
-     aria-haspopup="listbox">
-  Select Agents...
-</div>
-            <div id="checkboxes">
-              </div>
-          </div>
+          <div id="smart-agent-select-container"></div>
         </div>
 
         <div class="form-group" style="flex: 1;">
@@ -7671,30 +7660,21 @@ function closeCheckboxesOutside(e) {
 }
 
 function initSmartDropdown() {
-  const container = document.getElementById('checkboxes');
+  const containerId = 'smart-agent-select-container';
+  const container = document.getElementById(containerId);
   if (!container) return;
   
-  container.innerHTML = ''; // Clear old list
-  
-  // 1. "Select All" Option
-  const allLabel = document.createElement('label');
-  allLabel.innerHTML = `<input type="checkbox" id="smart-check-all" onchange="toggleSmartAll(this)"> <strong>Select Whole Team</strong>`;
-  allLabel.style.backgroundColor = "var(--input-bg)";
-  container.appendChild(allLabel);
-
-  // 2. Filter Users (Show only my team)
+  // 1. Filter Users (Hierarchy Logic)
   let usersToShow = [];
 
   if (selfRole === 'superadmin') {
-      // Superadmin sees everyone
       usersToShow = allUsersList;
   } 
   else {
-      // Managers see only their hierarchy
       const myTeamSet = new Set();
-      
-      // Build Adjacency Map (Manager -> Direct Reports)
       const reportsMap = {};
+      
+      // Build Adjacency Map
       allUsersList.forEach(u => {
           const s = (u.supervisor || "").toLowerCase();
           const p = (u.projectManager || "").toLowerCase();
@@ -7702,7 +7682,7 @@ function initSmartDropdown() {
           if (p && p!==s) { if(!reportsMap[p]) reportsMap[p]=[]; reportsMap[p].push(u.email); }
       });
 
-      // Traverse Hierarchy (BFS) - [FIXED CRASH HERE]
+      // BFS Traversal
       if (selfEmail) {
           const queue = [selfEmail.toLowerCase()];
           while(queue.length > 0) {
@@ -7711,40 +7691,27 @@ function initSmartDropdown() {
               directReports.forEach(email => {
                   if (!myTeamSet.has(email)) {
                       myTeamSet.add(email);
-                      // If this report is also a manager, add to queue to find THEIR reports
                       const u = allUsersList.find(x => x.email === email);
                       if (u && u.role !== 'agent') queue.push(email);
                   }
               });
           }
-      } else {
-          // Fallback if selfEmail is somehow empty
-          console.error("selfEmail is missing in initSmartDropdown");
-          container.innerHTML = '<div style="padding:10px; color:red;">Error: User info not loaded. Try refreshing.</div>';
-          return;
       }
-
-      // Filter the main list
       usersToShow = allUsersList.filter(u => myTeamSet.has(u.email));
   }
 
-  // 3. Render List
-  if (usersToShow.length > 0) {
-    usersToShow.sort((a,b) => a.name.localeCompare(b.name));
-    
-    usersToShow.forEach(u => {
-      const lbl = document.createElement('label');
-      lbl.innerHTML = `<input type="checkbox" class="smart-agent-check" value="${u.email}"> ${u.name}`;
-      container.appendChild(lbl);
-    });
-  } else {
-    container.innerHTML += '<div style="padding:10px; color:#888;">No subordinates found in Core Sheet.</div>';
-  }
+  // 2. Render the Dropdown using the Analytics helper
+  // This builds the search box, "Select All", and list automatically
+  renderGlobalUserSelector(containerId, usersToShow, 'Select Agents', true, (selectedEmails) => {
+      // Store selection in dataset so loadSmartGrid can read it later
+      container.dataset.value = JSON.stringify(selectedEmails);
+  });
   
-  // Default Month
-  const now = new Date();
-  const monthStr = now.toISOString().slice(0, 7); 
-  document.getElementById('smart-month-picker').value = monthStr;
+  // 3. Set Default Month if empty
+  const picker = document.getElementById('smart-month-picker');
+  if(picker && !picker.value) {
+      picker.value = new Date().toISOString().slice(0, 7);
+  }
 }
 
 // --- 3. SELECT ALL LOGIC ---
@@ -7761,15 +7728,18 @@ function toggleSmartAll(source) {
   }
 }
 
-// 2. Load Data
 function loadSmartGrid() {
   const month = document.getElementById('smart-month-picker').value;
   if (!month) { setStatus('smart-grid-status', 'error', 'Please select a month.'); return; }
 
-  // Get selected emails
-  const checkboxes = document.querySelectorAll('.smart-agent-check:checked');
-  const selectedEmails = [];
-  checkboxes.forEach(cb => selectedEmails.push(cb.value));
+  // [UPDATED] Get selected emails from the new container's dataset
+  const container = document.getElementById('smart-agent-select-container');
+  let selectedEmails = [];
+  try {
+      selectedEmails = JSON.parse(container.dataset.value || "[]");
+  } catch(e) { 
+      console.error("Error parsing selection", e); 
+  }
 
   if (selectedEmails.length === 0) {
     setStatus('smart-grid-status', 'error', 'Please select at least one agent.');
