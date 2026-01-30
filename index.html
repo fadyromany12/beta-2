@@ -2965,6 +2965,7 @@ function populateUserInfo(user) {
   }
 
   selfUserName = user.name; 
+  selfEmail = user.email; // <--- ADD THIS LINE
   selfRole = user.role; 
   allUsersList = user.allUsers; 
   allAdminsList = user.allAdmins; 
@@ -7661,33 +7662,71 @@ function closeCheckboxesOutside(e) {
   }
 }
 
-// --- 2. INITIALIZE DROPDOWN (Called by showTab) ---
 function initSmartDropdown() {
   const container = document.getElementById('checkboxes');
   if (!container) return;
   
   container.innerHTML = ''; // Clear old list
   
-  // "Select All" Option
+  // 1. "Select All" Option
   const allLabel = document.createElement('label');
   allLabel.innerHTML = `<input type="checkbox" id="smart-check-all" onchange="toggleSmartAll(this)"> <strong>Select Whole Team</strong>`;
-  allLabel.style.backgroundColor = "var(--input-bg)"; // Highlight header
+  allLabel.style.backgroundColor = "var(--input-bg)";
   container.appendChild(allLabel);
 
-  // Individual Agents
-  if (allUsersList && allUsersList.length > 0) {
-    allUsersList.sort((a,b) => a.name.localeCompare(b.name));
+  // 2. Filter Users (Show only my team)
+  let usersToShow = [];
+
+  if (selfRole === 'superadmin') {
+      // Superadmin sees everyone
+      usersToShow = allUsersList;
+  } 
+  else {
+      // Managers see only their hierarchy
+      const myTeamSet = new Set();
+      
+      // Build Adjacency Map (Manager -> Direct Reports)
+      const reportsMap = {};
+      allUsersList.forEach(u => {
+          const s = (u.supervisor || "").toLowerCase();
+          const p = (u.projectManager || "").toLowerCase();
+          if (s) { if(!reportsMap[s]) reportsMap[s]=[]; reportsMap[s].push(u.email); }
+          if (p && p!==s) { if(!reportsMap[p]) reportsMap[p]=[]; reportsMap[p].push(u.email); }
+      });
+
+      // Traverse Hierarchy (BFS)
+      const queue = [selfEmail.toLowerCase()];
+      while(queue.length > 0) {
+          const current = queue.shift();
+          const directReports = reportsMap[current] || [];
+          directReports.forEach(email => {
+              if (!myTeamSet.has(email)) {
+                  myTeamSet.add(email);
+                  // If this report is also a manager (not agent), add to queue to find THEIR reports
+                  const u = allUsersList.find(x => x.email === email);
+                  if (u && u.role !== 'agent') queue.push(email);
+              }
+          });
+      }
+
+      // Filter the main list
+      usersToShow = allUsersList.filter(u => myTeamSet.has(u.email));
+  }
+
+  // 3. Render List
+  if (usersToShow.length > 0) {
+    usersToShow.sort((a,b) => a.name.localeCompare(b.name));
     
-    allUsersList.forEach(u => {
+    usersToShow.forEach(u => {
       const lbl = document.createElement('label');
       lbl.innerHTML = `<input type="checkbox" class="smart-agent-check" value="${u.email}"> ${u.name}`;
       container.appendChild(lbl);
     });
   } else {
-    container.innerHTML += '<div style="padding:10px; color:#888;">No agents found.</div>';
+    container.innerHTML += '<div style="padding:10px; color:#888;">No subordinates found in Core Sheet.</div>';
   }
   
-  // Default Month (Current Month)
+  // Default Month
   const now = new Date();
   const monthStr = now.toISOString().slice(0, 7); 
   document.getElementById('smart-month-picker').value = monthStr;
