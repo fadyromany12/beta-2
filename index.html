@@ -1571,16 +1571,52 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
 .rank-apprentice { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
 .rank-novice { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
 
-
-      .multiselect { position: relative; width: 100%; }
-      .selectBox { position: relative; }
-      .selectBox select { width: 100%; font-weight: bold; }
-      .overSelect { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
-      #checkboxes { display: none; border: 1px solid #ccc; border-top: none; max-height: 200px; overflow-y: scroll; background: var(--card-bg); position: absolute; width: 100%; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-      #checkboxes label { display: block; padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
-      #checkboxes label:hover { background-color: var(--input-bg); }
-      #checkboxes input { margin-right: 10px; }
+/* FIX 2: Corrected Dropdown CSS */
+    .multiselect { 
+      position: relative; 
+      width: 100%; 
+      z-index: 100; /* Ensure container is above other form elements */
+    }
+    .selectBox { position: relative; cursor: pointer; } /* Added cursor pointer */
+    .selectBox select { width: 100%; font-weight: bold; cursor: pointer; }
+    .overSelect { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
     
+    #checkboxes { 
+      display: none; 
+      border: 1px solid var(--border-color); 
+      border-top: none; 
+      max-height: 250px; /* Increased height */
+      overflow-y: auto; 
+      background: var(--card-bg); 
+      position: absolute; 
+      width: 100%; 
+      z-index: 1000 !important; /* Force it to float ABOVE everything */
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+      border-radius: 0 0 6px 6px;
+    }
+    #checkboxes label { 
+      display: block; 
+      padding: 10px 12px; 
+      cursor: pointer; 
+      border-bottom: 1px solid var(--border-color); 
+      font-size: 0.9rem;
+    }
+    #checkboxes label:hover { background-color: var(--input-bg); }
+    #checkboxes input { margin-right: 10px; transform: scale(1.2); }
+
+    /* FIX 3: Confined Save Bar */
+    #smart-save-bar {
+      display: none; 
+      text-align: right; 
+      background: var(--card-bg); 
+      padding: 15px; 
+      position: sticky; 
+      bottom: 0; 
+      border-top: 2px solid var(--konecta-blue); 
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.1); 
+      z-index: 90; /* High but below dropdowns */
+      margin: 0 -24px -24px -24px; /* Stretch to edges of card */
+    }
 
 
 
@@ -2004,7 +2040,7 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
         <button type="button" class="btn-primary" onclick="saveSmartGrid()">Save Changes</button>
       </div>
 
-    </div>
+    </div></div></div>
 
 
         <!-- ================================== -->
@@ -2711,24 +2747,33 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
           btn.disabled = disabled;
         });
       }
+
       // === TAB SWITCHING FUNCTION ===
 function showTab(tabName) {
-  // 1. Hide all panels
-  document.querySelectorAll('.tab-panel').forEach(panel => {
+  // FIX 1: Cleanup Schedule Editor artifacts when leaving the tab
+  const checkboxes = document.getElementById('checkboxes');
+  if (checkboxes) checkboxes.style.display = 'none'; // Force close the dropdown
+  expanded = false; // Reset dropdown state variable
+  
+  const saveBar = document.getElementById('smart-save-bar');
+  if (saveBar) saveBar.style.display = 'none'; // Hide the sticky save bar
+
+  // FIX 2: Hide ALL panels (including "tab-content" which was used for the Schedule panel)
+  document.querySelectorAll('.tab-panel, .tab-content').forEach(panel => {
     panel.style.display = 'none';
   });
 
-  // 2. Deactivate all tab buttons
+  // 3. Deactivate all tab buttons
   document.querySelectorAll('.tab-button').forEach(button => {
     button.classList.remove('active');
   });
 
-  // 3. Clear all status messages
+  // 4. Clear all status messages
   document.querySelectorAll('.status-message').forEach(div => {
     div.classList.remove('visible', 'success', 'error', 'processing');
   });
 
-  // 4. Show the correct panel and activate the correct button
+  // 5. Show the correct panel and activate the correct button
   const panel = document.getElementById(tabName + '-panel');
   const button = document.getElementById(tabName + '-tab-button');
   
@@ -2739,28 +2784,22 @@ function showTab(tabName) {
   if (allUsersList && allUsersList.length > 0) {
     
     if (tabName === 'admin-tools') {
-      // A. Populate Dropdowns
       populateAdminDropdown(allUsersList, selfUserName, 'manual-punch-user', 'Select User');
       populateAdminDropdown(allUsersList, selfUserName, 'balance-user-select', 'Select User');
       populateAdminDropdown(allUsersList, selfUserName, 'admin-leave-user', 'Select User');
 
-      // B. INNER SECURITY CHECK (The Fix)
-      // Check the attribute we set in populateUserInfo
-      const canManageBalances = document.body.getAttribute('data-perm-balances') === 'true'; 
+      const canManageBalances = document.body.getAttribute('data-perm-balances') === 'true';
 
       if (canManageBalances) {
           document.getElementById('break-config-section').style.display = 'block';
           document.getElementById('balance-adjustment-section').style.display = 'block';
-          // Also show the admin leave form if they have balance permissions (usually Admins)
           document.getElementById('admin-leave-form').style.display = 'block';
       } else {
           document.getElementById('break-config-section').style.display = 'none';
           document.getElementById('balance-adjustment-section').style.display = 'none';
-          // Hide admin leave form for Managers (they should use Approvals tab, not submit on behalf)
           document.getElementById('admin-leave-form').style.display = 'none';
       }
       
-      // Load data only if visible
       if(canManageBalances) loadBreakConfig();
     
     } else if (tabName === 'reporting-line') {
@@ -2786,11 +2825,18 @@ function showTab(tabName) {
       loadAnalyticsTab();
     }
     else if (tabName === 'schedule') {
-      initScheduleGridDropdown();
-      initSmartDropdown();
-      // Default dates: Today to Today+7 days
-      document.getElementById('grid-start-date').valueAsDate = new Date();
-      document.getElementById('grid-end-date').valueAsDate = new Date(new Date().getTime() + 7*24*60*60*1000); 
+      // FIX 3: Lazy Load & Performance Optimization
+      // Only build the heavy dropdown ONCE. Subsequent clicks just show the tab.
+      if (!window.smartDropdownInitialized) {
+          initSmartDropdown(); 
+          window.smartDropdownInitialized = true; // Flag to prevent reload
+      }
+      
+      // Default dates logic (Run every time to ensure valid range)
+      if (!document.getElementById('grid-start-date').value) {
+          document.getElementById('grid-start-date').valueAsDate = new Date();
+          document.getElementById('grid-end-date').valueAsDate = new Date(new Date().getTime() + 7*24*60*60*1000); 
+      }
     }
   }
 
@@ -2812,7 +2858,7 @@ function showTab(tabName) {
   } else if (tabName === 'announcements-admin') {
     loadAnnouncements_Admin();
   }
-}    
+}  
       // --- Refresh User Info ---
       function refreshCurrentData() {
         const btn = document.getElementById('header-refresh-button');
@@ -7531,20 +7577,24 @@ function showCheckboxes() {
   if (!expanded) {
     checkboxes.style.display = "block";
     expanded = true;
+    
+    // Add one-time click listener to close if clicking outside
+    document.addEventListener('click', closeCheckboxesOutside);
   } else {
     checkboxes.style.display = "none";
     expanded = false;
+    document.removeEventListener('click', closeCheckboxesOutside);
   }
 }
 
-// Close checkboxes if clicked outside
-document.addEventListener('click', function(e) {
+function closeCheckboxesOutside(e) {
   const container = document.querySelector('.multiselect');
-  if (container && !container.contains(e.target)) {
+  if (!container.contains(e.target)) {
     document.getElementById("checkboxes").style.display = "none";
     expanded = false;
+    document.removeEventListener('click', closeCheckboxesOutside);
   }
-});
+}
 
 // Initialize the Dropdown (Call this inside showTab 'schedule')
 function initSmartDropdown() {
