@@ -2025,55 +2025,111 @@ body.dark-mode .status-offline { background-color: #374151; color: #9ca3af; }
           </div>
         </div>
 
-        
+        <!-- ================================== -->
+        <!--    TAB 5: SCHEDULE EDITOR PANEL    -->
+        <!-- ================================== -->
+        <div id="schedule-panel" class="tab-panel">
+          
+          <form id="csv-import-form" class="form-container">
+            <h2>Bulk Schedule Importer (CSV)</h2>
+            <p class="text-color-secondary" style="font-size: 0.9rem;">
+              Upload a CSV with headers: <code>Name</code>, <code>StartDate</code>, <code>ShiftStartTime</code>, <code>EndDate</code>, <code>ShiftEndTime</code>, <code>LeaveType</code>, <code>agent email</code>
+            </p>
+            <button 
+              type="button" 
+              class="btn-secondary" 
+              style="margin-bottom: 20px; max-width: 300px;" 
+              onclick="downloadScheduleTemplate()">
+              Download CSV Template
+            </button>
+            <div class="form-group">
+              <label for="csv-file-input">Select CSV File</label>
+              <input type="file" id="csv-file-input" accept=".csv">
+            </div>
+            <button type="button" class="btn-primary" onclick="importScheduleCSV()">Import CSV</button>
+          </form>
+          <div id="csv-import-status" class="status-message"></div>
+
           <!-- ================================== -->
         <!--    TAB 5: SCHEDULE EDITOR PANEL neww    -->
         <!-- ================================== -->
-        
-        <div id="schedule-panel" class="tab-panel" style="display:none;">
-  <div class="card">
-    <div class="card-header">
-      <h3>Smart Schedule Editor</h3>
+
+          <hr class="section-divider">
+
+<div class="form-container">
+  <h2>Visual Schedule Editor</h2>
+  <div class="form-row" style="align-items: flex-end; background: var(--input-bg); padding: 15px; border-radius: 6px; border: 1px solid var(--border-color);">
+    
+    <div class="form-group" style="flex: 1; min-width: 200px;">
+      <label>Select Team / Agent</label>
+      <select id="grid-agent-select">
+        <option value="ALL">Whole Team</option>
+      </select>
     </div>
 
-    <div class="form-container">
-      <div class="form-row" style="background: var(--input-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); align-items: flex-end;">
-        
-        <div class="form-group" style="flex: 2; min-width: 250px;">
-          <label>Select Agents</label>
-          <div id="smart-agent-select-container"></div>
-        </div>
+    <div class="form-group">
+      <label>From</label>
+      <input type="date" id="grid-start-date">
+    </div>
 
-        <div class="form-group" style="flex: 1;">
-          <label>Select Month</label>
-          <input type="month" id="smart-month-picker" class="form-control">
-        </div>
+    <div class="form-group">
+      <label>To</label>
+      <input type="date" id="grid-end-date">
+    </div>
 
-        <div class="form-group">
-          <button type="button" class="btn-primary" onclick="loadSmartGrid()">
-            Load Schedule
-          </button>
-        </div>
-      </div>
-
-      <div id="smart-grid-status" class="status-message"></div>
-
-      <div id="smart-grid-wrapper" style="margin-top: 20px; overflow-x: auto;">
-        <p class="text-color-secondary" style="text-align:center; padding: 20px;">
-          Select agents and a month above to begin editing.
-        </p>
-      </div>
-
-      <div id="smart-save-bar">
-        <span style="margin-right: 15px; font-weight: bold; color: var(--primary-color);">
-          Unsaved Changes detected
-        </span>
-        <button type="button" class="btn-primary" onclick="saveSmartGrid()">Save Changes</button>
-      </div>
-
+    <div class="form-group">
+      <button type="button" class="btn-primary" onclick="loadScheduleGrid()">Load Schedule</button>
     </div>
   </div>
+
+  <div id="schedule-grid-status" class="status-message"></div>
+
+  <div id="schedule-grid-wrapper" style="margin-top: 20px; overflow-x: auto;">
+    <p class="text-color-secondary" style="text-align: center;">Select criteria and click Load to edit schedules.</p>
+  </div>
+
+  <div id="grid-save-bar" style="display: none; margin-top: 15px; text-align: right; background: var(--card-bg); padding: 10px; position: sticky; bottom: 0; border-top: 1px solid var(--border-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.05);">
+    <span id="unsaved-changes-msg" style="color: #d97706; font-weight: 600; margin-right: 15px;">Unsaved Changes</span>
+    <button type="button" class="btn-primary" onclick="saveScheduleGrid()">Save Changes</button>
+  </div> </div>
+
+
+
+          
+          <hr class="section-divider">
+          
+          <form id="schedule-form" class="form-container">
+            <h2>Manual Schedule Editor</h2>
+            <div class="form-group">
+  <label>User</label>
+  <div id="schedule-agent-select-container"></div>
 </div>
+            <div class="form-row">
+              <div class="form-group"><label for="schedule-start-date">Start Date</label><input type="date" id="schedule-start-date" required></div>
+              <div class="form-group"><label for="schedule-end-date">End Date (Optional)</label><input type="date" id="schedule-end-date"><small>Leave blank to submit for a single day.</small></div>
+            </div>
+            <div class="form-group"><label for="schedule-leave-type">Leave Type / Status</label><select id="schedule-leave-type" onchange="toggleTimeFields()"><option value="Present">Present</option><option value="Sick">Sick</option><option value="Annual">Annual</option><option value="Casual">Casual</option><option value="Absent">Absent</option><option value="Day Off">Day Off</option></select></div>
+            
+            <div id="time-fields" class="form-row">
+              <div class="form-group">
+                <label for="schedule-start-time">Shift Start Time</label>
+                <input type="time" id="schedule-start-time">
+              </div>
+              <div class="form-group">
+                <label for="schedule-end-date-shift">Shift End Date</label>
+                <input type="date" id="schedule-end-date-shift">
+                <small>Only fill if shift ends on a different day.</small>
+              </div>
+              <div class="form-group">
+                <label for="schedule-end-time">Shift End Time</label>
+                <input type="time" id="schedule-end-time">
+              </div>
+            </div>
+            <button type="button" class="btn-primary" onclick="submitSchedule()">Submit Schedule(s)</button>
+          </form>
+          <div id="schedule-status" class="status-message"></div>
+        </div>
+        
 
 
         <!-- ================================== -->
@@ -4386,16 +4442,16 @@ function downloadScheduleTemplate() {
   const headers = "Name,StartDate,ShiftStartTime,ShiftEndDate,ShiftEndTime,LeaveType,agent email";
   const rows = [
   // Standard Shift
-  'Fady Bekhet,2025-11-30,09:00,2025-11-30,18:00,Present,"=proper(SUBSTITUTE(A2,"" "","".""))&""@konecta.com"',
+  'Fady Bekhet,DD/MM/YYYY please use this format ,09:00,DD/MM/YYYY,18:00,Present,"=proper(SUBSTITUTE(A2,"" "","".""))&""@konecta.com"',
   
   // Day Off
-  'Rachel Zane,2025-11-30,22:00,2025-12-01,07:00,Present,use the formula in the cell above and place a (") after .com',
+  'Rachel Zane,15/2/2026,22:00,16/2/2026,07:00,Present,use the formula in the cell above and place a (") after .com',
   
   // Canceled Day Off (Triple Paid) - Must have times
-  'Mike Ross,2025-11-30,10:00,2025-11-30,19:00,Cancel Day Off,please make sure in the days off to tpe Day Off and for the annuals casuals  and sick to be submitted from the leave request tab in kompass',
+  'Mike Ross,15/2/2026,10:00,15/2/2026,19:00,Cancel Day Off,please make sure in the days off to tpe Day Off and for the annuals casuals  and sick to be submitted from the leave request tab in kompass',
   
   // Overnight Shift
-  'Jane Smith,2025-11-30,,2025-11-30,,Day Off,jane.smith@konecta.com'
+  'Jane Smith,15/2/2026,,15/2/2026,,Day Off,jane.smith@konecta.com'
 ];
   
   
