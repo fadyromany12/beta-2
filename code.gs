@@ -30,7 +30,7 @@ const PLANNED_BREAK_SECONDS = 15 * 60; // 15 minutes
 const PLANNED_LUNCH_SECONDS = 30 * 60; // 30 minutes
 
 // --- Shift Cutoff Hour (e.g., 7 = 7 AM) ---
-const SHIFT_CUTOFF_HOUR = 7; 
+const SHIFT_CUTOFF_HOUR = 0.001; 
 
 // ================= WEB APP ENTRY (PHASE 4 UPDATED) =================
 function doGet(e) {
